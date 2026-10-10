@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta charset="utf-8">
+<title>Bellows Oio Log</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;background:#f5f5f7;color:#111}
+main{max-width:600px;margin:auto;padding:18px 14px 40px}
+h1{font-size:28px;margin:6px 0 4px}.sub{color:#666;margin-bottom:18px}
+.card{background:white;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 1px 4px #0001}
+h2{font-size:18px;margin:0 0 12px}
+label{display:block;font-weight:600;margin:12px 0 7px}
+input,select{font-size:17px;padding:12px;border:1px solid #ccc;border-radius:10px;width:100%;box-sizing:border-box;background:white}
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+button.choice,button.action{font-size:16px;padding:13px 10px;border-radius:11px;border:1px solid #ccc;background:#fff}
+button.choice.selected{background:#111;color:white;border-color:#111}
+button.action{width:100%;background:#111;color:white;border:0;margin-top:10px;font-weight:700}
+button.secondary{background:#e9e9ed;color:#111}
+.event{border-top:1px solid #ddd;margin-top:14px;padding-top:14px}
+.small{font-size:13px;color:#666}.status{margin-top:10px;text-align:center;color:#26734d;font-weight:600}
+</style>
+</head>
+<body>
+<main>
+<h1>🎣 Bellows Oio Log</h1>
+<div class="sub">Tap choices. Your trips stay on this phone.</div>
+
+<div class="card">
+<h2>Trip</h2>
+<label>Date</label><input id="date" type="date">
+<label>Start / End</label>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<input id="start" type="time"><input id="end" type="time">
+</div>
+
+<div id="fields"></div>
+</div>
+
+<div class="card">
+<h2>Fish / Strike Events</h2>
+<div id="events"></div>
+<button class="action secondary" onclick="addEvent()">＋ Add fish / strike</button>
+</div>
+
+<div class="card">
+<button class="action" onclick="saveTrip()">Save Trip</button>
+<button class="action secondary" onclick="exportData()">Export My Logs</button>
+<div id="status" class="status"></div>
+</div>
+</main>
+
+<script>
+const defs=[
+["tide","Tide","Rising","Falling","Near high","Mid-tide","Near low","Low trough/slack"],
+["light","Light","Bright daylight","Late afternoon","Sunset transition","Twilight","Dark"],
+["windDir","Wind direction","Onshore","Offshore","Alongshore","Variable"],
+["wind","Wind strength","Calm","Light","Moderate","Strong"],
+["surf","Surf","Calm","Light","Moderate","Heavy"],
+["churn","Churn / whitewater","Little","Moderate","Lots"],
+["clarity","Water clarity","Clear","Slightly cloudy","Cloudy","Murky"],
+["bait","Bait","Squid head","Squid strip","Whole squid","Shrimp","Oama","Other"],
+["rig","Rig","Carolina","3-way","Other"],
+["weight","Weight","1/2 oz","1 oz","2 oz","Other"],
+["cast","Casting distance","Near","Medium","Far"],
+["retrieve","Retrieve","Stationary","Slow","Moderate","Other"],
+["activity","Visible activity","None","Baitfish","Birds feeding","Fish feeding","Other"]
+];
+const state={}; const fields=document.getElementById("fields");
+defs.forEach(([id,title,...opts])=>{
+ let d=document.createElement("div"); d.innerHTML=`<label>${title}</label><div class="choices"></div>`;
+ let c=d.querySelector(".choices");
+ opts.forEach(o=>{let b=document.createElement("button");b.className="choice";b.type="button";b.textContent=o;
+ b.onclick=()=>{[...c.children].forEach(x=>x.classList.remove("selected"));b.classList.add("selected");state[id]=o};c.appendChild(b)});
+ fields.appendChild(d);
+});
+document.getElementById("date").valueAsDate=new Date();
+
+function addEvent(){
+ const wrap=document.createElement("div");wrap.className="event";
+ wrap.innerHTML=`<label>Time</label><input class="etime" type="time">
+ <label>Event</label><select class="etype"><option>Fish landed</option><option>Strike</option><option>Bait stolen/damaged</option></select>
+ <label>Species</label><input class="species" placeholder="e.g. oio, moi, papio">
+ <label>Distance</label><select class="edist"><option>Near</option><option>Medium</option><option>Far</option><option>Unknown</option>
+ </select>`;
+ document.getElementById("events").appendChild(wrap);
+}
+function saveTrip(){
+ const trip={date:date.value,start:start.value,end:end.value,...state,
+ events:[...document.querySelectorAll(".event")].map(e=>({
+ time:e.querySelector(".etime").value,event:e.querySelector(".etype").value,
+ species:e.querySelector(".species").value,distance:e.querySelector(".edist").value
+ })),savedAt:new Date().toISOString()};
+ const logs=JSON.parse(localStorage.getItem("bellowsOioLogs")||"[]");logs.push(trip);
+ localStorage.setItem("bellowsOioLogs",JSON.stringify(logs));
+ document.getElementById("status").textContent="Trip saved ✓";
+}
+function exportData(){
+ const data=localStorage.getItem("bellowsOioLogs")||"[]";
+ const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([data],{type:"application/json"}));
+ a.download="bellows-oio-logs.json";a.click();URL.revokeObjectURL(a.href);
+}
+</script>
+</body>
+</html>
